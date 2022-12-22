@@ -1,0 +1,17 @@
+{{define "home"}}
+<!DOCTYPE html>
+<html lang="en">
+{{template "head" "Home"}}
+<body>
+    {{template "header" "Home"}}
+
+    <main>
+        {{range .Blocks}}
+            {{template "block" .}}
+        {{end}}
+    </main>
+
+    {{template "footer"}}
+</body>
+</html>
+{{end}}

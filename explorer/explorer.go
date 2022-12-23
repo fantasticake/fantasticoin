@@ -2,6 +2,7 @@ package explorer
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"text/template"
 
@@ -40,9 +41,11 @@ func add(w http.ResponseWriter, r *http.Request) {
 func Start(port int) {
 	templates = template.Must(template.ParseGlob("explorer/templates/pages/*.html"))
 	templates = template.Must(templates.ParseGlob("explorer/templates/partials/*.html"))
-	http.HandleFunc("/", home)
-	http.HandleFunc("/add", add)
+
+	router := http.NewServeMux()
+	router.HandleFunc("/", home)
+	router.HandleFunc("/add", add)
 
 	fmt.Printf("Server listening on http://localhost:%d\n", port)
-	http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))
 }

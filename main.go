@@ -1,7 +1,9 @@
 package main
 
-import "github.com/fantasticake/fantasticoin/explorer"
+import (
+	"github.com/fantasticake/fantasticoin/rest"
+)
 
 func main() {
-	explorer.Start(4000)
+	rest.Start(4000)
 }

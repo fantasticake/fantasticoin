@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/fantasticake/fantasticoin/blockchain"
 	"github.com/fantasticake/fantasticoin/utils"
@@ -72,12 +71,11 @@ func blocks(w http.ResponseWriter, r *http.Request) {
 }
 
 func block(w http.ResponseWriter, r *http.Request) {
-	input := mux.Vars(r)
-	height, err := strconv.Atoi(input["height"])
-	utils.HandleErr(err)
-	block, err := blockchain.GetBlock(blockchain.BC(), height)
+	hash := mux.Vars(r)["hash"]
+	block, err := blockchain.FindBlock(hash)
 	encoder := json.NewEncoder(w)
 	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
 		utils.HandleErr(encoder.Encode(errorResponse{fmt.Sprint(err)}))
 	} else {
 		utils.HandleErr(encoder.Encode(block))
@@ -97,7 +95,7 @@ func Start(aPort int) {
 	router.Use(jsonMiddleware)
 	router.HandleFunc("/", documentaion).Methods("GET")
 	router.HandleFunc("/blocks", blocks).Methods("GET", "POST")
-	router.HandleFunc("/blocks/{height:[0-9]+}", block).Methods("GET")
+	router.HandleFunc("/blocks/{hash:[a-f0-9]+}", block).Methods("GET")
 
 	fmt.Printf("Server listening on http://localhost:%d\n", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))

@@ -3,7 +3,7 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"os"
+	"runtime"
 
 	"github.com/fantasticake/fantasticoin/explorer"
 	"github.com/fantasticake/fantasticoin/rest"
@@ -13,7 +13,7 @@ func usage() {
 	fmt.Printf("Please use the following flags:\n")
 	fmt.Printf("-mode: Start a server with a mode: 'rest','html' (default 'rest')\n")
 	fmt.Printf("-port: Set port for a server (default 4000)\n\n")
-	os.Exit(0)
+	runtime.Goexit()
 }
 
 func Start() {

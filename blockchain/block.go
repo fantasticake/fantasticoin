@@ -1,23 +1,34 @@
 package blockchain
 
 import (
-	"crypto/sha256"
-	"fmt"
+	"strings"
+	"time"
 
 	"github.com/fantasticake/fantasticoin/db"
 	"github.com/fantasticake/fantasticoin/utils"
 )
 
 type Block struct {
-	Data     string `json:"data"`
-	Hash     string `json:"hash"`
-	PrevHash string `json:"prevHash,omitempty"`
-	Height   int    `json:"height"`
+	Data       string `json:"data"`
+	Hash       string `json:"hash"`
+	PrevHash   string `json:"prevHash,omitempty"`
+	Height     int    `json:"height"`
+	Difficulty int    `json:"difficulty"`
+	Nonce      int    `json:"nonce"`
+	Timestamp  int    `json:"timestamp"`
 }
 
-func (b *Block) calcHash() {
-	hash := sha256.Sum256([]byte(b.Data + b.PrevHash))
-	b.Hash = fmt.Sprintf("%x", hash)
+func (b *Block) mine() {
+	difficulty := strings.Repeat("0", b.Difficulty)
+	for {
+		b.Timestamp = int(time.Now().Unix())
+		b.Hash = utils.Hash(b)
+		if strings.HasPrefix(b.Hash, difficulty) {
+			return
+		} else {
+			b.Nonce += 1
+		}
+	}
 }
 
 func persistBlock(block *Block) {
@@ -25,16 +36,17 @@ func persistBlock(block *Block) {
 }
 
 func createBlock(b *blockchain, data string) *Block {
-	newBlock := &Block{data, "", b.LastHash, getHeight(b) + 1}
-	newBlock.calcHash()
-	return newBlock
-}
+	newBlock := &Block{
+		Data:       data,
+		Hash:       "",
+		PrevHash:   b.LastHash,
+		Height:     getHeight(b) + 1,
+		Difficulty: getDifficulty(b),
+		Nonce:      0,
+	}
+	newBlock.mine()
 
-func (b *blockchain) AddBlock(data string) {
-	block := createBlock(b, data)
-	b.LastHash = block.Hash
-	persistBlock(block)
-	PersistCheckpoint(b)
+	return newBlock
 }
 
 func FindBlock(hash string) (*Block, error) {
@@ -45,19 +57,4 @@ func FindBlock(hash string) (*Block, error) {
 	}
 	utils.FromBytes(block, hashedBlock)
 	return block, nil
-}
-
-func Blocks(b *blockchain) []*Block {
-	var blocks []*Block
-	hashCursor := b.LastHash
-	for {
-		if hashCursor == "" {
-			break
-		}
-		block, err := FindBlock(hashCursor)
-		utils.HandleErr(err)
-		blocks = append(blocks, block)
-		hashCursor = block.PrevHash
-	}
-	return blocks
 }

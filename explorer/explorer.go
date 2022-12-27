@@ -31,10 +31,10 @@ func add(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(err)
 		}
 	case http.MethodPost:
-		r.ParseForm()
+		/* r.ParseForm()
 		data := r.Form.Get("data")
 		blockchain.BC().AddBlock(data)
-		http.Redirect(w, r, "/", http.StatusPermanentRedirect)
+		http.Redirect(w, r, "/", http.StatusPermanentRedirect) */
 	}
 }
 

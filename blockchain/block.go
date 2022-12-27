@@ -9,13 +9,13 @@ import (
 )
 
 type Block struct {
-	Data       string `json:"data"`
-	Hash       string `json:"hash"`
-	PrevHash   string `json:"prevHash,omitempty"`
-	Height     int    `json:"height"`
-	Difficulty int    `json:"difficulty"`
-	Nonce      int    `json:"nonce"`
-	Timestamp  int    `json:"timestamp"`
+	Hash         string `json:"hash"`
+	PrevHash     string `json:"prevHash,omitempty"`
+	Height       int    `json:"height"`
+	Difficulty   int    `json:"difficulty"`
+	Nonce        int    `json:"nonce"`
+	Timestamp    int    `json:"timestamp"`
+	Transactions []*Tx  `json:"transactions"`
 }
 
 func (b *Block) mine() {
@@ -35,9 +35,8 @@ func persistBlock(block *Block) {
 	db.SaveBlock([]byte(block.Hash), utils.ToBytes(block))
 }
 
-func createBlock(b *blockchain, data string) *Block {
+func createBlock(b *blockchain) *Block {
 	newBlock := &Block{
-		Data:       data,
 		Hash:       "",
 		PrevHash:   b.LastHash,
 		Height:     getHeight(b) + 1,
@@ -45,6 +44,7 @@ func createBlock(b *blockchain, data string) *Block {
 		Nonce:      0,
 	}
 	newBlock.mine()
+	newBlock.Transactions = []*Tx{makeCoinbaseTx()}
 
 	return newBlock
 }

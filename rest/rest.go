@@ -26,8 +26,14 @@ type urlInfo struct {
 	Payload     string `json:"payload,omitempty"`
 }
 
-type blocksInput struct {
-	Data string
+type totalBalanceResponse struct {
+	Address string `json:"address"`
+	Amount  int    `json:"amount"`
+}
+
+type sendPayload struct {
+	To     string `json:"to"`
+	Amount int    `json:"amount"`
 }
 
 type errorResponse struct {
@@ -57,16 +63,45 @@ func documentaion(w http.ResponseWriter, r *http.Request) {
 	utils.HandleErr(json.NewEncoder(w).Encode(urlData))
 }
 
+func balance(w http.ResponseWriter, r *http.Request) {
+	isTotal := r.URL.Query().Get("total")
+	encoder := json.NewEncoder(w)
+	switch isTotal {
+	case "true":
+		utils.HandleErr(encoder.Encode(totalBalanceResponse{
+			Address: blockchain.TestWallet,
+			Amount:  blockchain.GetBalanceByAddr(blockchain.BC(), blockchain.TestWallet),
+		}))
+	default:
+		utils.HandleErr(encoder.Encode(blockchain.GetTxOutsByAddr(blockchain.BC(), blockchain.TestWallet)))
+	}
+}
+
+func send(w http.ResponseWriter, r *http.Request) {
+	var payload sendPayload
+	utils.HandleErr(json.NewDecoder(r.Body).Decode(&payload))
+	err := blockchain.Mempool().AddTx(blockchain.BC(), payload.To, payload.Amount)
+	if err != nil {
+		json.NewEncoder(w).Encode(errorResponse{fmt.Sprint(err)})
+	} else {
+		w.WriteHeader(http.StatusCreated)
+	}
+}
+
+func mempool(w http.ResponseWriter, r *http.Request) {
+	utils.HandleErr(json.NewEncoder(w).Encode(blockchain.Mempool()))
+}
+
 func blocks(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		blocks := blockchain.Blocks(blockchain.BC())
 		utils.HandleErr(json.NewEncoder(w).Encode(blocks))
-	case "POST":
-		input := blocksInput{}
-		utils.HandleErr(json.NewDecoder(r.Body).Decode(&input))
-		blockchain.BC().AddBlock(input.Data)
-		w.WriteHeader(http.StatusCreated)
+	case "POST": /*
+			input := blocksInput{}
+			utils.HandleErr(json.NewDecoder(r.Body).Decode(&input))
+			blockchain.BC().AddBlock(input.Data)
+			w.WriteHeader(http.StatusCreated) */
 	}
 }
 
@@ -94,6 +129,9 @@ func Start(aPort int) {
 	router := mux.NewRouter()
 	router.Use(jsonMiddleware)
 	router.HandleFunc("/", documentaion).Methods("GET")
+	router.HandleFunc("/balance", balance).Methods("GET")
+	router.HandleFunc("/send", send).Methods("POST")
+	router.HandleFunc("/mempool", mempool).Methods("GET")
 	router.HandleFunc("/blocks", blocks).Methods("GET", "POST")
 	router.HandleFunc("/blocks/{hash:[a-f0-9]+}", block).Methods("GET")
 

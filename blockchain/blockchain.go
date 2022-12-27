@@ -29,7 +29,7 @@ func BC() *blockchain {
 			if checkpoint != nil {
 				utils.FromBytes(b, checkpoint)
 			} else {
-				b.AddBlock("Genesis")
+				b.AddBlock()
 			}
 		})
 	}
@@ -54,8 +54,8 @@ func getHeight(b *blockchain) int {
 	return lastBlock(b).Height
 }
 
-func (b *blockchain) AddBlock(data string) {
-	block := createBlock(b, data)
+func (b *blockchain) AddBlock() {
+	block := createBlock(b)
 	b.LastHash = block.Hash
 	persistBlock(block)
 	PersistCheckpoint(b)

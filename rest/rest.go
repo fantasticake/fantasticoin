@@ -51,7 +51,6 @@ func documentaion(w http.ResponseWriter, r *http.Request) {
 			Url:         URL("/blocks"),
 			Method:      "POST",
 			Description: "Add a block",
-			Payload:     "data:string",
 		},
 		{
 			Url:         URL("/blocks/{height}"),
@@ -73,7 +72,7 @@ func balance(w http.ResponseWriter, r *http.Request) {
 			Amount:  blockchain.GetBalanceByAddr(blockchain.BC(), blockchain.TestWallet),
 		}))
 	default:
-		utils.HandleErr(encoder.Encode(blockchain.GetTxOutsByAddr(blockchain.BC(), blockchain.TestWallet)))
+		utils.HandleErr(encoder.Encode(blockchain.GetUTxOutsByAddr(blockchain.BC(), blockchain.TestWallet)))
 	}
 }
 
@@ -97,11 +96,9 @@ func blocks(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		blocks := blockchain.Blocks(blockchain.BC())
 		utils.HandleErr(json.NewEncoder(w).Encode(blocks))
-	case "POST": /*
-			input := blocksInput{}
-			utils.HandleErr(json.NewDecoder(r.Body).Decode(&input))
-			blockchain.BC().AddBlock(input.Data)
-			w.WriteHeader(http.StatusCreated) */
+	case "POST":
+		blockchain.BC().AddBlock()
+		w.WriteHeader(http.StatusCreated)
 	}
 }
 

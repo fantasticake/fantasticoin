@@ -44,8 +44,7 @@ func createBlock(b *blockchain) *Block {
 		Nonce:      0,
 	}
 	newBlock.mine()
-	newBlock.Transactions = []*Tx{makeCoinbaseTx()}
-
+	newBlock.Transactions = getTxstoConfirm()
 	return newBlock
 }
 

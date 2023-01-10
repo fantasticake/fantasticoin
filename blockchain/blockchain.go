@@ -22,17 +22,15 @@ var (
 )
 
 func BC() *blockchain {
-	if b == nil {
-		once.Do(func() {
-			b = &blockchain{""}
-			checkpoint := db.GetCheckpoint()
-			if checkpoint != nil {
-				utils.FromBytes(b, checkpoint)
-			} else {
-				b.AddBlock()
-			}
-		})
-	}
+	once.Do(func() {
+		b = &blockchain{""}
+		checkpoint := db.GetCheckpoint()
+		if checkpoint != nil {
+			utils.FromBytes(b, checkpoint)
+		} else {
+			b.AddBlock()
+		}
+	})
 	return b
 }
 

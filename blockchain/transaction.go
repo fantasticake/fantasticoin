@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/fantasticake/fantasticoin/utils"
+	"github.com/fantasticake/fantasticoin/wallet"
 )
 
 type Tx struct {
@@ -15,14 +16,15 @@ type Tx struct {
 }
 
 type TxIn struct {
-	Owner string `json:"owner"`
-	TxId  string `json:"txId"`
-	Index int    `json:"index"`
+	Address   string `json:"address"`
+	TxId      string `json:"txId"`
+	Index     int    `json:"index"`
+	Signature string `json:"signature,omitempty"`
 }
 
 type TxOut struct {
-	Onwer  string `json:"owner"`
-	Amount int    `json:"amount"`
+	Address string `json:"address"`
+	Amount  int    `json:"amount"`
 }
 
 type UTxOut struct {
@@ -37,7 +39,6 @@ type mempool struct {
 
 var m *mempool
 var minerReward int = 10
-var TestWallet string = "testWallet"
 
 func (m *mempool) clear() {
 	m.Txs = nil
@@ -65,8 +66,13 @@ func isOnMempool(uTxOut *UTxOut) bool {
 	return false
 }
 
-func getTxstoConfirm() []*Tx {
-	txs := Mempool().Txs
+func getTxstoConfirm(b *blockchain) []*Tx {
+	var txs []*Tx
+	for _, tx := range Mempool().Txs {
+		if verifyTx(b, tx) {
+			txs = append(txs, tx)
+		}
+	}
 	Mempool().clear()
 	return append(txs, makeCoinbaseTx())
 }
@@ -76,13 +82,13 @@ func makeCoinbaseTx() *Tx {
 		Id:        "",
 		Timestamp: int(time.Now().Unix()),
 		TxIns: []*TxIn{{
-			Owner: "Coinbase",
-			TxId:  "",
-			Index: -1,
+			Address: "Coinbase",
+			TxId:    "",
+			Index:   -1,
 		}},
 		TxOuts: []*TxOut{{
-			Onwer:  TestWallet,
-			Amount: minerReward,
+			Address: wallet.Wallet().Address,
+			Amount:  minerReward,
 		}},
 	}
 	tx.calcId()
@@ -100,21 +106,21 @@ func (m *mempool) AddTx(b *blockchain, to string, amount int) error {
 }
 
 func makeTx(b *blockchain, to string, amount int) (*Tx, error) {
-	if GetBalanceByAddr(b, TestWallet) < amount {
+	if GetBalanceByAddr(b, wallet.Wallet().Address) < amount {
 		return nil, errors.New("Not enough balance")
 	}
 
 	txIns := []*TxIn{}
 	var total int
-	uTxOuts := GetUTxOutsByAddr(b, TestWallet)
+	uTxOuts := GetUTxOutsByAddr(b, wallet.Wallet().Address)
 	for _, uTxOut := range uTxOuts {
 		if total >= amount {
 			break
 		}
 		txIn := TxIn{
-			Owner: TestWallet,
-			TxId:  uTxOut.TxId,
-			Index: uTxOut.Index,
+			Address: wallet.Wallet().Address,
+			TxId:    uTxOut.TxId,
+			Index:   uTxOut.Index,
 		}
 		txIns = append(txIns, &txIn)
 		total += uTxOut.Amount
@@ -124,14 +130,14 @@ func makeTx(b *blockchain, to string, amount int) (*Tx, error) {
 	change := total - amount
 	if change > 0 {
 		txOut := TxOut{
-			Onwer:  TestWallet,
-			Amount: change,
+			Address: wallet.Wallet().Address,
+			Amount:  change,
 		}
 		txOuts = append(txOuts, &txOut)
 	}
 	txOut := TxOut{
-		Onwer:  to,
-		Amount: amount,
+		Address: to,
+		Amount:  amount,
 	}
 	txOuts = append(txOuts, &txOut)
 
@@ -142,8 +148,37 @@ func makeTx(b *blockchain, to string, amount int) (*Tx, error) {
 		TxOuts:    txOuts,
 	}
 	tx.calcId()
-
+	tx.sign()
 	return &tx, nil
+}
+
+func findTx(b *blockchain, id string) *Tx {
+	blocks := Blocks(b)
+	for _, block := range blocks {
+		for _, tx := range block.Transactions {
+			if tx.Id == id {
+				return tx
+			}
+		}
+	}
+	return nil
+}
+
+func (t *Tx) sign() {
+	for _, txIn := range t.TxIns {
+		txIn.Signature = wallet.Sign(t.Id)
+	}
+}
+
+func verifyTx(b *blockchain, t *Tx) bool {
+	for _, txIn := range t.TxIns {
+		txOut := findTx(b, txIn.TxId).TxOuts[txIn.Index]
+		ok := wallet.Verify(txOut.Address, t.Id, txIn.Signature)
+		if !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func GetUTxOutsByAddr(b *blockchain, address string) []*UTxOut {
@@ -152,12 +187,12 @@ func GetUTxOutsByAddr(b *blockchain, address string) []*UTxOut {
 	for _, block := range Blocks(BC()) {
 		for _, tx := range block.Transactions {
 			for _, txIn := range tx.TxIns {
-				if txIn.Owner == address {
+				if txIn.Address == address {
 					txUsedMap[txIn.TxId] = true
 				}
 			}
 			for index, txOut := range tx.TxOuts {
-				if txOut.Onwer == address {
+				if txOut.Address == address {
 					if _, ok := txUsedMap[tx.Id]; !ok {
 						uTxOut := &UTxOut{
 							TxId:   tx.Id,

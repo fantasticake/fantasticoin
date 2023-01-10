@@ -8,6 +8,7 @@ import (
 
 	"github.com/fantasticake/fantasticoin/blockchain"
 	"github.com/fantasticake/fantasticoin/utils"
+	"github.com/fantasticake/fantasticoin/wallet"
 	"github.com/gorilla/mux"
 )
 
@@ -68,11 +69,11 @@ func balance(w http.ResponseWriter, r *http.Request) {
 	switch isTotal {
 	case "true":
 		utils.HandleErr(encoder.Encode(totalBalanceResponse{
-			Address: blockchain.TestWallet,
-			Amount:  blockchain.GetBalanceByAddr(blockchain.BC(), blockchain.TestWallet),
+			Address: wallet.Wallet().Address,
+			Amount:  blockchain.GetBalanceByAddr(blockchain.BC(), wallet.Wallet().Address),
 		}))
 	default:
-		utils.HandleErr(encoder.Encode(blockchain.GetUTxOutsByAddr(blockchain.BC(), blockchain.TestWallet)))
+		utils.HandleErr(encoder.Encode(blockchain.GetUTxOutsByAddr(blockchain.BC(), wallet.Wallet().Address)))
 	}
 }
 

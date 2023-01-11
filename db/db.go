@@ -2,25 +2,28 @@ package db
 
 import (
 	"errors"
+	"os"
+	"strings"
 
-	"github.com/boltdb/bolt"
 	"github.com/fantasticake/fantasticoin/utils"
+	"go.etcd.io/bbolt"
 )
 
 var (
-	db            *bolt.DB
+	db            *bbolt.DB
 	dbName        = "database.db"
 	blocksBucket  = "blocksBucket"
 	dataBucket    = "dataBucket"
 	checkpointKey = "checkpointKey"
 )
 
-func DB() *bolt.DB {
+func DB() *bbolt.DB {
 	if db == nil {
-		database, err := bolt.Open(dbName, 0600, nil)
+		port := strings.Split(os.Args[1], "=")[1]
+		database, err := bbolt.Open(port+dbName, 0600, nil)
 		db = database
 		utils.HandleErr(err)
-		err = db.Update(func(tx *bolt.Tx) error {
+		err = db.Update(func(tx *bbolt.Tx) error {
 			_, err = tx.CreateBucketIfNotExists([]byte(blocksBucket))
 			if err != nil {
 				return err
@@ -38,7 +41,7 @@ func Close() {
 }
 
 func SaveCheckpoint(data []byte) {
-	err := DB().Update(func(tx *bolt.Tx) error {
+	err := DB().Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(dataBucket))
 		err := bucket.Put([]byte(checkpointKey), data)
 		return err
@@ -47,7 +50,7 @@ func SaveCheckpoint(data []byte) {
 }
 
 func SaveBlock(key []byte, data []byte) {
-	err := DB().Update(func(tx *bolt.Tx) error {
+	err := DB().Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(blocksBucket))
 		err := bucket.Put(key, data)
 		return err
@@ -57,7 +60,7 @@ func SaveBlock(key []byte, data []byte) {
 
 func GetCheckpoint() []byte {
 	var data []byte
-	DB().View(func(tx *bolt.Tx) error {
+	DB().View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(dataBucket))
 		data = bucket.Get([]byte(checkpointKey))
 		return nil
@@ -67,7 +70,7 @@ func GetCheckpoint() []byte {
 
 func FindBlock(key []byte) ([]byte, error) {
 	var data []byte
-	DB().View(func(tx *bolt.Tx) error {
+	DB().View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(blocksBucket))
 		data = bucket.Get(key)
 		return nil

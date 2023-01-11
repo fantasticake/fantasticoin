@@ -3,7 +3,9 @@ module github.com/fantasticake/fantasticoin
 go 1.19
 
 require (
-	github.com/boltdb/bolt v1.3.1 // indirect
-	github.com/gorilla/mux v1.8.0 // indirect
-	golang.org/x/sys v0.3.0 // indirect
+	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/websocket v1.5.0
+	go.etcd.io/bbolt v1.3.6
 )
+
+require golang.org/x/sys v0.3.0 // indirect

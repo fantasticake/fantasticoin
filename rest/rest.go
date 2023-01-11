@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/fantasticake/fantasticoin/blockchain"
+	"github.com/fantasticake/fantasticoin/p2p"
 	"github.com/fantasticake/fantasticoin/utils"
 	"github.com/fantasticake/fantasticoin/wallet"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 )
 
 var port int
@@ -37,6 +41,11 @@ type sendPayload struct {
 	Amount int    `json:"amount"`
 }
 
+type connectPayload struct {
+	Address string `json:"address"`
+	Port    int    `json:"port"`
+}
+
 type errorResponse struct {
 	Error string `json:"error"`
 }
@@ -54,9 +63,9 @@ func documentaion(w http.ResponseWriter, r *http.Request) {
 			Description: "Add a block",
 		},
 		{
-			Url:         URL("/blocks/{height}"),
+			Url:         URL("/blocks/{hash}"),
 			Method:      "GET",
-			Description: "get a block by height",
+			Description: "get a block by hash",
 		},
 	}
 
@@ -115,6 +124,31 @@ func block(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func peers(w http.ResponseWriter, r *http.Request) {
+	utils.HandleErr(json.NewEncoder(w).Encode(p2p.Peers))
+}
+
+func ws(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{}
+	upgrader.CheckOrigin = func(r *http.Request) bool {
+		return true
+	}
+	conn, err := upgrader.Upgrade(w, r, nil)
+	utils.HandleErr(err)
+	address := strings.Split(r.RemoteAddr, ":")[0]
+	port, err := strconv.Atoi(r.URL.Query().Get("port"))
+	utils.HandleErr(err)
+	p2p.AddPeer(conn, address, port)
+}
+
+func connect(w http.ResponseWriter, r *http.Request) {
+	payload := connectPayload{}
+	utils.HandleErr(json.NewDecoder(r.Body).Decode(&payload))
+	conn, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://%s:%d/ws?port=%d", payload.Address, payload.Port, port), nil)
+	utils.HandleErr(err)
+	p2p.AddPeer(conn, payload.Address, payload.Port)
+}
+
 func jsonMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
@@ -132,6 +166,9 @@ func Start(aPort int) {
 	router.HandleFunc("/mempool", mempool).Methods("GET")
 	router.HandleFunc("/blocks", blocks).Methods("GET", "POST")
 	router.HandleFunc("/blocks/{hash:[a-f0-9]+}", block).Methods("GET")
+	router.HandleFunc("/peers", peers).Methods("GET")
+	router.HandleFunc("/ws", ws).Methods("GET")
+	router.HandleFunc("/connect", connect).Methods("POST")
 
 	fmt.Printf("Server listening on http://localhost:%d\n", port)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), router))

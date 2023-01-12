@@ -39,7 +39,7 @@ func createBlock(b *blockchain) *Block {
 	newBlock := &Block{
 		Hash:       "",
 		PrevHash:   b.LastHash,
-		Height:     getHeight(b) + 1,
+		Height:     GetHeight(b) + 1,
 		Difficulty: getDifficulty(b),
 		Nonce:      0,
 	}

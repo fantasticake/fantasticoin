@@ -45,11 +45,11 @@ func PersistCheckpoint(bc *blockchain) {
 	db.SaveCheckpoint(utils.ToBytes(bc))
 }
 
-func getHeight(b *blockchain) int {
+func GetHeight(b *blockchain) int {
 	if isEmpty(b) {
 		return 0
 	}
-	return lastBlock(b).Height
+	return LastBlock(b).Height
 }
 
 func (b *blockchain) AddBlock() {
@@ -74,7 +74,7 @@ func Blocks(b *blockchain) []*Block {
 	return blocks
 }
 
-func lastBlock(b *blockchain) *Block {
+func LastBlock(b *blockchain) *Block {
 	if isEmpty(b) {
 		return nil
 	}
@@ -84,7 +84,7 @@ func lastBlock(b *blockchain) *Block {
 }
 
 func recalcDifficulty(b *blockchain) int {
-	lastBlock := lastBlock(b)
+	lastBlock := LastBlock(b)
 	startBlock := Blocks(b)[recalcDiffInterval-1]
 	actualTime := (lastBlock.Timestamp - startBlock.Timestamp) / 60
 	aTimePerBlock := actualTime / (recalcDiffInterval - 1)
@@ -99,9 +99,21 @@ func recalcDifficulty(b *blockchain) int {
 func getDifficulty(b *blockchain) int {
 	if isEmpty(b) {
 		return defaultDifficulty
-	} else if getHeight(b)%recalcDiffInterval == 0 {
+	} else if GetHeight(b)%recalcDiffInterval == 0 {
 		return recalcDifficulty(b)
 	} else {
-		return lastBlock(b).Difficulty
+		return LastBlock(b).Difficulty
+	}
+}
+
+func (b *blockchain) ReplaceBlocks(blocks []*Block) {
+	if len(blocks) > 0 {
+		b.LastHash = blocks[0].Hash
+		PersistCheckpoint(b)
+
+		db.ClearBlocks()
+		for _, block := range blocks {
+			persistBlock(block)
+		}
 	}
 }

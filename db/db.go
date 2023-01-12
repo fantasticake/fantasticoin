@@ -80,3 +80,13 @@ func FindBlock(key []byte) ([]byte, error) {
 	}
 	return data, nil
 }
+
+func ClearBlocks() {
+	DB().Update(func(tx *bbolt.Tx) error {
+		err := tx.DeleteBucket([]byte(blocksBucket))
+		utils.HandleErr(err)
+		_, err = tx.CreateBucket([]byte(blocksBucket))
+		utils.HandleErr(err)
+		return nil
+	})
+}

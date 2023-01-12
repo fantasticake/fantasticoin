@@ -125,7 +125,7 @@ func block(w http.ResponseWriter, r *http.Request) {
 }
 
 func peers(w http.ResponseWriter, r *http.Request) {
-	utils.HandleErr(json.NewEncoder(w).Encode(p2p.Peers))
+	utils.HandleErr(json.NewEncoder(w).Encode(p2p.GetPeers()))
 }
 
 func ws(w http.ResponseWriter, r *http.Request) {
@@ -138,7 +138,8 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	address := strings.Split(r.RemoteAddr, ":")[0]
 	port, err := strconv.Atoi(r.URL.Query().Get("port"))
 	utils.HandleErr(err)
-	p2p.AddPeer(conn, address, port)
+	peer := p2p.Peers().InitPeer(conn, address, port)
+	peer.SendLastBlock()
 }
 
 func connect(w http.ResponseWriter, r *http.Request) {
@@ -146,7 +147,7 @@ func connect(w http.ResponseWriter, r *http.Request) {
 	utils.HandleErr(json.NewDecoder(r.Body).Decode(&payload))
 	conn, _, err := websocket.DefaultDialer.Dial(fmt.Sprintf("ws://%s:%d/ws?port=%d", payload.Address, payload.Port, port), nil)
 	utils.HandleErr(err)
-	p2p.AddPeer(conn, payload.Address, payload.Port)
+	p2p.Peers().InitPeer(conn, payload.Address, payload.Port)
 }
 
 func jsonMiddleware(next http.Handler) http.Handler {

@@ -33,9 +33,15 @@ func Peers() *peers {
 	return p
 }
 
-func (p *peers) InitPeer(conn *websocket.Conn, address string, port int) *peer {
+func isConnected(address string, port int) bool {
 	p.m.Lock()
 	defer p.m.Unlock()
+	key := fmt.Sprintf("%s:%d", address, port)
+	_, ok := Peers().v[key]
+	return ok
+}
+
+func (p *peers) InitPeer(conn *websocket.Conn, address string, port int) *peer {
 	newPeer := p.addPeer(conn, address, port)
 	go newPeer.read()
 	go newPeer.write()
@@ -43,6 +49,8 @@ func (p *peers) InitPeer(conn *websocket.Conn, address string, port int) *peer {
 }
 
 func (p *peers) addPeer(conn *websocket.Conn, address string, port int) *peer {
+	p.m.Lock()
+	defer p.m.Unlock()
 	newPeer := &peer{
 		Address: address,
 		Port:    port,

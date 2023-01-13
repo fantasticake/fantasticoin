@@ -9,6 +9,7 @@ import (
 
 type blockchain struct {
 	LastHash string
+	m        sync.Mutex
 }
 
 var (
@@ -23,7 +24,7 @@ var (
 
 func BC() *blockchain {
 	once.Do(func() {
-		b = &blockchain{""}
+		b = &blockchain{LastHash: ""}
 		checkpoint := db.GetCheckpoint()
 		if checkpoint != nil {
 			utils.FromBytes(b, checkpoint)
@@ -35,6 +36,8 @@ func BC() *blockchain {
 }
 
 func isEmpty(b *blockchain) bool {
+	b.m.Lock()
+	defer b.m.Unlock()
 	if b.LastHash == "" {
 		return true
 	}
@@ -52,14 +55,31 @@ func GetHeight(b *blockchain) int {
 	return LastBlock(b).Height
 }
 
-func (b *blockchain) AddBlock() {
-	block := createBlock(b)
+func (b *blockchain) updateBlockchain(block *Block) {
+	b.m.Lock()
+	defer b.m.Unlock()
 	b.LastHash = block.Hash
-	persistBlock(block)
 	PersistCheckpoint(b)
 }
 
+func (b *blockchain) AddBlock() *Block {
+	block := createBlock(b)
+	persistBlock(block)
+	b.updateBlockchain(block)
+	return block
+}
+
+func (b *blockchain) AddPeerBlock(block *Block) {
+	persistBlock(block)
+	b.updateBlockchain(block)
+	for _, tx := range block.Transactions {
+		Mempool().removeTx(tx.Id)
+	}
+}
+
 func Blocks(b *blockchain) []*Block {
+	b.m.Lock()
+	defer b.m.Unlock()
 	var blocks []*Block
 	hashCursor := b.LastHash
 	for {
@@ -78,6 +98,8 @@ func LastBlock(b *blockchain) *Block {
 	if isEmpty(b) {
 		return nil
 	}
+	b.m.Lock()
+	defer b.m.Unlock()
 	block, err := FindBlock(b.LastHash)
 	utils.HandleErr(err)
 	return block
@@ -108,8 +130,7 @@ func getDifficulty(b *blockchain) int {
 
 func (b *blockchain) ReplaceBlocks(blocks []*Block) {
 	if len(blocks) > 0 {
-		b.LastHash = blocks[0].Hash
-		PersistCheckpoint(b)
+		b.updateBlockchain(blocks[0])
 
 		db.ClearBlocks()
 		for _, block := range blocks {

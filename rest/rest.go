@@ -89,16 +89,17 @@ func balance(w http.ResponseWriter, r *http.Request) {
 func send(w http.ResponseWriter, r *http.Request) {
 	var payload sendPayload
 	utils.HandleErr(json.NewDecoder(r.Body).Decode(&payload))
-	err := blockchain.Mempool().AddTx(blockchain.BC(), payload.To, payload.Amount)
+	tx, err := blockchain.Mempool().AddTx(blockchain.BC(), payload.To, payload.Amount)
 	if err != nil {
 		json.NewEncoder(w).Encode(errorResponse{fmt.Sprint(err)})
 	} else {
 		w.WriteHeader(http.StatusCreated)
+		p2p.BroadcastNewTx(tx)
 	}
 }
 
 func mempool(w http.ResponseWriter, r *http.Request) {
-	utils.HandleErr(json.NewEncoder(w).Encode(blockchain.Mempool()))
+	utils.HandleErr(json.NewEncoder(w).Encode(blockchain.MemPoolTxs(blockchain.Mempool())))
 }
 
 func blocks(w http.ResponseWriter, r *http.Request) {
@@ -107,8 +108,9 @@ func blocks(w http.ResponseWriter, r *http.Request) {
 		blocks := blockchain.Blocks(blockchain.BC())
 		utils.HandleErr(json.NewEncoder(w).Encode(blocks))
 	case "POST":
-		blockchain.BC().AddBlock()
+		block := blockchain.BC().AddBlock()
 		w.WriteHeader(http.StatusCreated)
+		p2p.BroadcastNewBlock(block)
 	}
 }
 
@@ -135,11 +137,14 @@ func ws(w http.ResponseWriter, r *http.Request) {
 	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	utils.HandleErr(err)
+
 	address := strings.Split(r.RemoteAddr, ":")[0]
 	port, err := strconv.Atoi(r.URL.Query().Get("port"))
 	utils.HandleErr(err)
 	peer := p2p.Peers().InitPeer(conn, address, port)
+
 	peer.SendLastBlock()
+	p2p.BroadcastNewPeer(peer)
 }
 
 func connect(w http.ResponseWriter, r *http.Request) {

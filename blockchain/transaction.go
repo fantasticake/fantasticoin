@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/fantasticake/fantasticoin/utils"
@@ -34,28 +35,49 @@ type UTxOut struct {
 }
 
 type mempool struct {
-	Txs []*Tx `json:"txs"`
+	Txs map[string]*Tx `json:"txs"`
+	m   sync.Mutex
 }
 
 var m *mempool
 var minerReward int = 10
 
-func (m *mempool) clear() {
-	m.Txs = nil
-}
-
 func Mempool() *mempool {
 	if m == nil {
-		m = &mempool{}
+		m = &mempool{
+			Txs: make(map[string]*Tx),
+		}
 	}
 	return m
+}
+
+func MemPoolTxs(m *mempool) []*Tx {
+	m.m.Lock()
+	defer m.m.Unlock()
+	var txs []*Tx
+	for _, tx := range m.Txs {
+		txs = append(txs, tx)
+	}
+	return txs
 }
 
 func (t *Tx) calcId() {
 	t.Id = utils.Hash(t)
 }
 
+func (m *mempool) clear() {
+	m.Txs = make(map[string]*Tx)
+}
+
+func (m *mempool) removeTx(id string) {
+	m.m.Lock()
+	defer m.m.Unlock()
+	delete(m.Txs, id)
+}
+
 func isOnMempool(uTxOut *UTxOut) bool {
+	Mempool().m.Lock()
+	defer Mempool().m.Unlock()
 	for _, tx := range Mempool().Txs {
 		for _, txIn := range tx.TxIns {
 			if txIn.TxId == uTxOut.TxId && txIn.Index == uTxOut.Index {
@@ -67,6 +89,8 @@ func isOnMempool(uTxOut *UTxOut) bool {
 }
 
 func getTxstoConfirm(b *blockchain) []*Tx {
+	Mempool().m.Lock()
+	defer Mempool().m.Unlock()
 	var txs []*Tx
 	for _, tx := range Mempool().Txs {
 		if verifyTx(b, tx) {
@@ -96,13 +120,16 @@ func makeCoinbaseTx() *Tx {
 	return tx
 }
 
-func (m *mempool) AddTx(b *blockchain, to string, amount int) error {
+func (m *mempool) AddTx(b *blockchain, to string, amount int) (*Tx, error) {
 	tx, err := makeTx(b, to, amount)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	m.Txs = append(m.Txs, tx)
-	return nil
+
+	m.m.Lock()
+	defer m.m.Unlock()
+	m.Txs[tx.Id] = tx
+	return tx, nil
 }
 
 func makeTx(b *blockchain, to string, amount int) (*Tx, error) {

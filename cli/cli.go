@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/fantasticake/fantasticoin/explorer"
-	"github.com/fantasticake/fantasticoin/rest"
+	"github.com/fantasticake/simple-coin/explorer"
+	"github.com/fantasticake/simple-coin/rest"
 )
 
 func usage() {

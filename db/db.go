@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/fantasticake/fantasticoin/utils"
+	"github.com/fantasticake/simple-coin/utils"
 	"go.etcd.io/bbolt"
 )
 

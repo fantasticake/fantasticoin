@@ -1,4 +1,4 @@
-module github.com/fantasticake/fantasticoin
+module github.com/fantasticake/simple-coin
 
 go 1.19
 

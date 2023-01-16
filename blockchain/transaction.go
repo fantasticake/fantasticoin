@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fantasticake/fantasticoin/utils"
-	"github.com/fantasticake/fantasticoin/wallet"
+	"github.com/fantasticake/simple-coin/utils"
+	"github.com/fantasticake/simple-coin/wallet"
 )
 
 type Tx struct {

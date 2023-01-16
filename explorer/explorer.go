@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"text/template"
 
-	"github.com/fantasticake/fantasticoin/blockchain"
+	"github.com/fantasticake/simple-coin/blockchain"
 )
 
 type homeData struct {

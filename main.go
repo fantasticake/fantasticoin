@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/fantasticake/fantasticoin/cli"
-	"github.com/fantasticake/fantasticoin/db"
+	"github.com/fantasticake/simple-coin/cli"
+	"github.com/fantasticake/simple-coin/db"
 )
 
 func main() {

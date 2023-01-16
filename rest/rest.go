@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fantasticake/fantasticoin/blockchain"
-	"github.com/fantasticake/fantasticoin/p2p"
-	"github.com/fantasticake/fantasticoin/utils"
-	"github.com/fantasticake/fantasticoin/wallet"
+	"github.com/fantasticake/simple-coin/blockchain"
+	"github.com/fantasticake/simple-coin/p2p"
+	"github.com/fantasticake/simple-coin/utils"
+	"github.com/fantasticake/simple-coin/wallet"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )

@@ -3,8 +3,8 @@ package p2p
 import (
 	"fmt"
 
-	"github.com/fantasticake/fantasticoin/blockchain"
-	"github.com/fantasticake/fantasticoin/utils"
+	"github.com/fantasticake/simple-coin/blockchain"
+	"github.com/fantasticake/simple-coin/utils"
 	"github.com/gorilla/websocket"
 )
 

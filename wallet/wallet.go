@@ -11,7 +11,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/fantasticake/fantasticoin/utils"
+	"github.com/fantasticake/simple-coin/utils"
 )
 
 type wallet struct {
@@ -20,7 +20,7 @@ type wallet struct {
 }
 
 var (
-	walletFile string         = "fantasticoin.wallet"
+	walletFile string         = "simple_coin.wallet"
 	ec         elliptic.Curve = elliptic.P256()
 	w          *wallet
 	once       sync.Once

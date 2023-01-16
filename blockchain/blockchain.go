@@ -3,8 +3,8 @@ package blockchain
 import (
 	"sync"
 
-	"github.com/fantasticake/fantasticoin/db"
-	"github.com/fantasticake/fantasticoin/utils"
+	"github.com/fantasticake/simple-coin/db"
+	"github.com/fantasticake/simple-coin/utils"
 )
 
 type blockchain struct {

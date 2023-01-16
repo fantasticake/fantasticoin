@@ -1,5 +1,5 @@
-# fantasticoin
+# simple cryptocurrency
 
-Simple blockchain with Golang
+Simple cryptocurrency with Golang
 
 edit db naming after test

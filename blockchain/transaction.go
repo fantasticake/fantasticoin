@@ -193,7 +193,7 @@ func findTx(b *blockchain, id string) *Tx {
 
 func (t *Tx) sign() {
 	for _, txIn := range t.TxIns {
-		txIn.Signature = wallet.Sign(t.Id)
+		txIn.Signature = wallet.Sign(t.Id, wallet.Wallet())
 	}
 }
 

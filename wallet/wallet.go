@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"fmt"
+	"io/fs"
 	"math/big"
 	"os"
 	"sync"
@@ -14,12 +15,38 @@ import (
 	"github.com/fantasticake/simple-coin/utils"
 )
 
+type fileLayer interface {
+	ReadFile(name string) ([]byte, error)
+	WriteFile(name string, data []byte, perm fs.FileMode) error
+	Stat(name string) (fs.FileInfo, error)
+	IsNotExist(err error) bool
+}
+
+type osFile struct{}
+
+func (osFile) ReadFile(name string) ([]byte, error) {
+	return os.ReadFile(name)
+}
+
+func (osFile) WriteFile(name string, data []byte, perm fs.FileMode) error {
+	return os.WriteFile(name, data, perm)
+}
+
+func (osFile) Stat(name string) (fs.FileInfo, error) {
+	return os.Stat(name)
+}
+
+func (osFile) IsNotExist(err error) bool {
+	return os.IsNotExist(err)
+}
+
 type wallet struct {
 	privateKey *ecdsa.PrivateKey
 	Address    string
 }
 
 var (
+	file       fileLayer      = osFile{}
 	walletFile string         = "simple_coin.wallet"
 	ec         elliptic.Curve = elliptic.P256()
 	w          *wallet
@@ -38,8 +65,8 @@ func Wallet() *wallet {
 	return w
 }
 
-func Sign(hash string) string {
-	r, s, err := ecdsa.Sign(rand.Reader, Wallet().privateKey, utils.ToBytes(hash))
+func Sign(hash string, w *wallet) string {
+	r, s, err := ecdsa.Sign(rand.Reader, w.privateKey, utils.ToBytes(hash))
 	utils.HandleErr(err)
 	return fmt.Sprintf("%x", append(r.Bytes(), s.Bytes()...))
 }
@@ -89,7 +116,7 @@ func (w *wallet) createKey() {
 }
 
 func (w *wallet) restoreKey() {
-	keyAsB, err := os.ReadFile(walletFile)
+	keyAsB, err := file.ReadFile(walletFile)
 	utils.HandleErr(err)
 	key, err := x509.ParseECPrivateKey(keyAsB)
 	utils.HandleErr(err)
@@ -99,12 +126,12 @@ func (w *wallet) restoreKey() {
 func persistKey(key *ecdsa.PrivateKey) {
 	keyAsB, err := x509.MarshalECPrivateKey(key)
 	utils.HandleErr(err)
-	utils.HandleErr(os.WriteFile(walletFile, keyAsB, 0700))
+	utils.HandleErr(file.WriteFile(walletFile, keyAsB, 0700))
 }
 
 func fileExists(filename string) bool {
-	_, err := os.Stat(filename)
-	if os.IsNotExist(err) {
+	_, err := file.Stat(filename)
+	if file.IsNotExist(err) {
 		return false
 	} else if err != nil {
 		utils.HandleErr(err)

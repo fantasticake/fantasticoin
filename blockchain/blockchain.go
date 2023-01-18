@@ -12,27 +12,58 @@ type blockchain struct {
 	m        sync.Mutex
 }
 
+type storageLayer interface {
+	GetBlockchain() []byte
+	SaveBlockchain(data []byte)
+	ClearBlocks()
+	FindBlock(key []byte) ([]byte, error)
+	SaveBlock(key []byte, data []byte)
+}
+
+type dbStorage struct{}
+
+func (dbStorage) GetBlockchain() []byte {
+	return db.GetBlockchain()
+}
+func (dbStorage) SaveBlockchain(data []byte) {
+	db.SaveBlockchain(data)
+}
+func (dbStorage) ClearBlocks() {
+	db.ClearBlocks()
+}
+func (dbStorage) FindBlock(key []byte) ([]byte, error) {
+	return db.FindBlock(key)
+}
+func (dbStorage) SaveBlock(key []byte, data []byte) {
+	db.SaveBlock(key, data)
+}
+
 var (
 	defaultDifficulty    int = 2
 	recalcDiffInterval   int = 5 //when to recalculate difficulty per blocks
 	blocksPerMin         int = 2
 	blocksPerMinErrRange int = 1
 
-	b    *blockchain
-	once sync.Once
+	b       *blockchain
+	storage storageLayer = dbStorage{}
+	once    sync.Once
 )
 
 func BC() *blockchain {
 	once.Do(func() {
 		b = &blockchain{LastHash: ""}
-		checkpoint := db.GetCheckpoint()
-		if checkpoint != nil {
-			utils.FromBytes(b, checkpoint)
+		blockchainAsB := storage.GetBlockchain()
+		if blockchainAsB != nil {
+			utils.FromBytes(b, blockchainAsB)
 		} else {
 			b.AddBlock()
 		}
 	})
 	return b
+}
+
+func PersistBlockchain(bc *blockchain) {
+	storage.SaveBlockchain(utils.ToBytes(bc))
 }
 
 func isEmpty(b *blockchain) bool {
@@ -42,10 +73,6 @@ func isEmpty(b *blockchain) bool {
 		return true
 	}
 	return false
-}
-
-func PersistCheckpoint(bc *blockchain) {
-	db.SaveCheckpoint(utils.ToBytes(bc))
 }
 
 func GetHeight(b *blockchain) int {
@@ -59,7 +86,7 @@ func (b *blockchain) updateBlockchain(block *Block) {
 	b.m.Lock()
 	defer b.m.Unlock()
 	b.LastHash = block.Hash
-	PersistCheckpoint(b)
+	PersistBlockchain(b)
 }
 
 func (b *blockchain) AddBlock() *Block {
@@ -132,7 +159,7 @@ func (b *blockchain) ReplaceBlocks(blocks []*Block) {
 	if len(blocks) > 0 {
 		b.updateBlockchain(blocks[0])
 
-		db.ClearBlocks()
+		storage.ClearBlocks()
 		for _, block := range blocks {
 			persistBlock(block)
 		}

@@ -2,8 +2,6 @@ package db
 
 import (
 	"errors"
-	"os"
-	"strings"
 
 	"github.com/fantasticake/simple-coin/utils"
 	"go.etcd.io/bbolt"
@@ -14,13 +12,12 @@ var (
 	dbName        = "database.db"
 	blocksBucket  = "blocksBucket"
 	dataBucket    = "dataBucket"
-	checkpointKey = "checkpointKey"
+	blockchainKey = "blockchainKey"
 )
 
 func DB() *bbolt.DB {
 	if db == nil {
-		port := strings.Split(os.Args[1], "=")[1]
-		database, err := bbolt.Open(port+dbName, 0600, nil)
+		database, err := bbolt.Open(dbName, 0600, nil)
 		db = database
 		utils.HandleErr(err)
 		err = db.Update(func(tx *bbolt.Tx) error {
@@ -40,10 +37,10 @@ func Close() {
 	DB().Close()
 }
 
-func SaveCheckpoint(data []byte) {
+func SaveBlockchain(data []byte) {
 	err := DB().Update(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(dataBucket))
-		err := bucket.Put([]byte(checkpointKey), data)
+		err := bucket.Put([]byte(blockchainKey), data)
 		return err
 	})
 	utils.HandleErr(err)
@@ -58,11 +55,11 @@ func SaveBlock(key []byte, data []byte) {
 	utils.HandleErr(err)
 }
 
-func GetCheckpoint() []byte {
+func GetBlockchain() []byte {
 	var data []byte
 	DB().View(func(tx *bbolt.Tx) error {
 		bucket := tx.Bucket([]byte(dataBucket))
-		data = bucket.Get([]byte(checkpointKey))
+		data = bucket.Get([]byte(blockchainKey))
 		return nil
 	})
 	return data

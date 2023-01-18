@@ -4,7 +4,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fantasticake/simple-coin/db"
 	"github.com/fantasticake/simple-coin/utils"
 )
 
@@ -32,7 +31,7 @@ func (b *Block) mine() {
 }
 
 func persistBlock(block *Block) {
-	db.SaveBlock([]byte(block.Hash), utils.ToBytes(block))
+	storage.SaveBlock([]byte(block.Hash), utils.ToBytes(block))
 }
 
 func createBlock(b *blockchain) *Block {
@@ -50,7 +49,7 @@ func createBlock(b *blockchain) *Block {
 
 func FindBlock(hash string) (*Block, error) {
 	block := &Block{}
-	hashedBlock, err := db.FindBlock([]byte(hash))
+	hashedBlock, err := storage.FindBlock([]byte(hash))
 	if err != nil {
 		return nil, err
 	}

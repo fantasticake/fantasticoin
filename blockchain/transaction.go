@@ -9,6 +9,24 @@ import (
 	"github.com/fantasticake/simple-coin/wallet"
 )
 
+type walletLayer interface {
+	Wallet() *wallet.W
+	Sign(hash string, w *wallet.W) string
+	Verify(addr string, hash string, signature string) bool
+}
+
+type ecWallet struct{}
+
+func (ecWallet) Wallet() *wallet.W {
+	return wallet.Wallet()
+}
+func (ecWallet) Sign(hash string, w *wallet.W) string {
+	return wallet.Sign(hash, w)
+}
+func (ecWallet) Verify(addr string, hash string, signature string) bool {
+	return wallet.Verify(addr, hash, signature)
+}
+
 type Tx struct {
 	Id        string   `json:"id"`
 	Timestamp int      `json:"timestamp"`
@@ -111,7 +129,7 @@ func makeCoinbaseTx() *Tx {
 			Index:   -1,
 		}},
 		TxOuts: []*TxOut{{
-			Address: wallet.Wallet().Address,
+			Address: w.Wallet().Address,
 			Amount:  minerReward,
 		}},
 	}
@@ -133,19 +151,19 @@ func (m *mempool) AddTx(b *blockchain, to string, amount int) (*Tx, error) {
 }
 
 func makeTx(b *blockchain, to string, amount int) (*Tx, error) {
-	if GetBalanceByAddr(b, wallet.Wallet().Address) < amount {
+	if GetBalanceByAddr(b, w.Wallet().Address) < amount {
 		return nil, errors.New("Not enough balance")
 	}
 
 	txIns := []*TxIn{}
 	var total int
-	uTxOuts := GetUTxOutsByAddr(b, wallet.Wallet().Address)
+	uTxOuts := GetUTxOutsByAddr(b, w.Wallet().Address)
 	for _, uTxOut := range uTxOuts {
 		if total >= amount {
 			break
 		}
 		txIn := TxIn{
-			Address: wallet.Wallet().Address,
+			Address: w.Wallet().Address,
 			TxId:    uTxOut.TxId,
 			Index:   uTxOut.Index,
 		}
@@ -157,7 +175,7 @@ func makeTx(b *blockchain, to string, amount int) (*Tx, error) {
 	change := total - amount
 	if change > 0 {
 		txOut := TxOut{
-			Address: wallet.Wallet().Address,
+			Address: w.Wallet().Address,
 			Amount:  change,
 		}
 		txOuts = append(txOuts, &txOut)
@@ -193,14 +211,14 @@ func findTx(b *blockchain, id string) *Tx {
 
 func (t *Tx) sign() {
 	for _, txIn := range t.TxIns {
-		txIn.Signature = wallet.Sign(t.Id, wallet.Wallet())
+		txIn.Signature = w.Sign(t.Id, w.Wallet())
 	}
 }
 
 func verifyTx(b *blockchain, t *Tx) bool {
 	for _, txIn := range t.TxIns {
 		txOut := findTx(b, txIn.TxId).TxOuts[txIn.Index]
-		ok := wallet.Verify(txOut.Address, t.Id, txIn.Signature)
+		ok := w.Verify(txOut.Address, t.Id, txIn.Signature)
 		if !ok {
 			return false
 		}
@@ -211,7 +229,7 @@ func verifyTx(b *blockchain, t *Tx) bool {
 func GetUTxOutsByAddr(b *blockchain, address string) []*UTxOut {
 	var uTxOuts []*UTxOut
 	txUsedMap := make(map[string]bool)
-	for _, block := range Blocks(BC()) {
+	for _, block := range Blocks(b) {
 		for _, tx := range block.Transactions {
 			for _, txIn := range tx.TxIns {
 				if txIn.Address == address {

@@ -40,7 +40,7 @@ func (osFile) IsNotExist(err error) bool {
 	return os.IsNotExist(err)
 }
 
-type wallet struct {
+type W struct {
 	privateKey *ecdsa.PrivateKey
 	Address    string
 }
@@ -49,13 +49,13 @@ var (
 	file       fileLayer      = osFile{}
 	walletFile string         = "simple_coin.wallet"
 	ec         elliptic.Curve = elliptic.P256()
-	w          *wallet
+	w          *W
 	once       sync.Once
 )
 
-func Wallet() *wallet {
+func Wallet() *W {
 	once.Do(func() {
-		w = &wallet{}
+		w = &W{}
 		if fileExists(walletFile) {
 			w.restore()
 		} else {
@@ -65,7 +65,7 @@ func Wallet() *wallet {
 	return w
 }
 
-func Sign(hash string, w *wallet) string {
+func Sign(hash string, w *W) string {
 	r, s, err := ecdsa.Sign(rand.Reader, w.privateKey, utils.ToBytes(hash))
 	utils.HandleErr(err)
 	return fmt.Sprintf("%x", append(r.Bytes(), s.Bytes()...))
@@ -92,30 +92,30 @@ func bigIntsByHexStr(data string) (*big.Int, *big.Int) {
 	return &x, &y
 }
 
-func (w *wallet) restore() {
+func (w *W) restore() {
 	w.restoreKey()
 	w.calcAddr()
 }
 
-func (w *wallet) calcAddr() {
+func (w *W) calcAddr() {
 	xAsB := w.privateKey.X.Bytes()
 	yAsB := w.privateKey.Y.Bytes()
 	w.Address = fmt.Sprintf("%x", append(xAsB, yAsB...))
 }
 
-func (w *wallet) init() {
+func (w *W) init() {
 	w.createKey()
 	persistKey(w.privateKey)
 	w.calcAddr()
 }
 
-func (w *wallet) createKey() {
+func (w *W) createKey() {
 	key, err := ecdsa.GenerateKey(ec, rand.Reader)
 	utils.HandleErr(err)
 	w.privateKey = key
 }
 
-func (w *wallet) restoreKey() {
+func (w *W) restoreKey() {
 	keyAsB, err := file.ReadFile(walletFile)
 	utils.HandleErr(err)
 	key, err := x509.ParseECPrivateKey(keyAsB)

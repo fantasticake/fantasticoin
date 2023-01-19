@@ -46,6 +46,7 @@ var (
 
 	b       *blockchain
 	storage storageLayer = dbStorage{}
+	w       walletLayer  = ecWallet{}
 	once    sync.Once
 )
 
@@ -90,7 +91,7 @@ func (b *blockchain) updateBlockchain(block *Block) {
 }
 
 func (b *blockchain) AddBlock() *Block {
-	block := createBlock(b)
+	block := createBlock(b, GetHeight(b), getDifficulty(b))
 	persistBlock(block)
 	b.updateBlockchain(block)
 	return block

@@ -34,12 +34,12 @@ func persistBlock(block *Block) {
 	storage.SaveBlock([]byte(block.Hash), utils.ToBytes(block))
 }
 
-func createBlock(b *blockchain) *Block {
+func createBlock(b *blockchain, height int, difficulty int) *Block {
 	newBlock := &Block{
 		Hash:       "",
 		PrevHash:   b.LastHash,
-		Height:     GetHeight(b) + 1,
-		Difficulty: getDifficulty(b),
+		Height:     height + 1,
+		Difficulty: difficulty,
 		Nonce:      0,
 	}
 	newBlock.mine()

@@ -32,10 +32,10 @@ func (t testFile) IsNotExist(err error) bool {
 	return t.FakeIsNotExist(err)
 }
 
-func getTestWallet() *wallet {
+func getTestWallet() *W {
 	keyAsB, _ := hex.DecodeString(testWallet)
 	key, _ := x509.ParseECPrivateKey(keyAsB)
-	tw := wallet{
+	tw := W{
 		privateKey: key,
 	}
 	tw.calcAddr()
